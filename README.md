@@ -1,5 +1,10 @@
 # learn-lisp
 
+## INSTALL
+
+[[http://www.jonathanfischer.net/modern-common-lisp-on-linux/]]
+
+
 ## hello world
 
 * lisp调试器中，q退出
@@ -10,6 +15,30 @@
 (load (compile-file "p0-hello-world.lisp"))
 ```
 
+## simple database
+
+```lisp
+(list 1 2 3)
+
+; property list plist
+(list :a 1 :b 2 :c 3)
+
+(getf (list :a 1 :b 2 :c 3) :a)
+(setf *db* nil)
+
+(remove-if-not #'evenp '(1 2 3 4 5 6))
+(remove-if-not #'(lambda (x) (= 1 (mod x 2))) '(1 2 3 4 5 6))
+```
+
+[[p1-cd-database.lisp]]
+
+* format
+  * `~a` output one var
+  * `~t` `~10t` tab
+  * `~{ ~}` list
+  * `~%` new line
+
+* remove-if-not
 
 ## emacs shortcuts
 
@@ -38,3 +67,6 @@
 ```
 ,cd dir
 ```
+
+# learn lisp
+
