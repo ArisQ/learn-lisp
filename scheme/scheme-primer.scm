@@ -216,6 +216,11 @@
       ""
       (string-append " " (fill-indent (- n 1)))))
 
+(define* (fill-indent-2 n #:optional (idt ""))
+  (if (= n 0)
+      idt
+      (fill-indent-2 (- n 1) (string-append idt " "))))
+
 (define (dump-tree tree indent)
   (if (= (length tree) 1)
       (format #f "(~a)" (car tree))
@@ -225,8 +230,147 @@
          node-str
          (dump-tree (car (cdr tree)) sub-indent)
          (format #f "\n")
-         (fill-indent sub-indent)
+         ;; (fill-indent sub-indent)
+         (fill-indent-2 sub-indent)
          (dump-tree (car (cdr (cdr tree))) sub-indent)
          (format #f ")")))))
 
 (display (dump-tree (build-tree 3) 0))
+
+(letrec ((alice
+          (lambda (first?)
+            (report-status "Alice" first?)
+            (if first? (bob #f))))
+         (bob
+          (lambda (first?)
+            (report-status "Bob" first?)
+            (if first? (alice #f))))
+         (report-status
+          (lambda (name first?)
+            (display
+             (string-append name " is "
+                            (if first? "first" "second") "!\n")))))
+  (alice #t)
+  (display "-----\n")
+  (bob #t))
+
+(let loop ((words '("carrot" "potato" "pea" "celery"))
+           (num-words 0)
+           (num-chars 0))
+  (if (eq? words '())
+      (format #f "We found ~a words and ~a chars!"
+              num-words num-chars)
+      (loop (cdr words)
+            (+ num-words 1)
+            (+ num-chars (string-length (car words))))))
+
+(define (fill-indent n)
+  (let loop ((i n)
+             (idt ""))
+    (if (= i 0)
+        idt
+        (loop (- i 1)
+              (string-append idt (format #f "~x" i))))))
+
+(fill-indent 10)
+
+(define chest 'sword)
+(format #t "~a\n" chest)
+(set! chest 'gold)
+(format #t "~a\n" chest)
+
+(define (make-count-down n)
+  (lambda ()
+    (define last-n n)
+    (if (zero? n)
+        0
+        (begin
+          (set! n (- n 1))
+          last-n))))
+(define cdown (make-count-down 3))
+(values
+ (cdown)
+ (cdown)
+ (cdown)
+ (cdown)
+ (cdown))
+
+(define vec (vector 'a 'b 'c))
+(define (print v) (format #t "~a~%" v))
+
+(print vec)
+(print (vector-ref vec 1))
+(vector-set! vec 1 'boop)
+(print (vector-ref vec 1))
+(print vec)
+
+(define (when test . body)
+  `(if ,test
+       ,(cons 'begin body)))
+
+(define-macro (when2 test . body)
+  `(if ,test
+       ,(cons 'begin body)))
+
+(define-syntax-rule (when3 test body ...)
+  (if test
+      (begin body ...)))
+
+(define (our-test) #t)
+(define (do-thing-1) (display "thing-1\n"))
+(define (do-thing-2) (display "thing-2\n"))
+
+(define (print v) (format #t "~a~%" v))
+
+(print (when '(our-test)
+		 '(do-thing-1)
+		 '(do-thing-2)))
+(display "=====\n")
+(print (when2 (our-test)
+			  (do-thing-1)
+			  (do-thing-2)))
+(display "=====\n")
+(when3 (our-test)
+       (do-thing-1)
+       (do-thing-2))
+
+(define-syntax-rule (for (item lst) body ...)
+  (for-each (lambda (item)
+              body ...)
+            lst))
+
+(for (str '("strawberries" "bananas" "grapes"))
+     (display (string-append "I just love "
+                             (string-upcase str)
+                             "!!!\n")))
+
+(define-syntax-rule (methods ((method-id method-args ...)
+                              body ...) ...)
+  (lambda (method . args)
+    (letrec ((method-id
+              (lambda (method-args ...)
+                body ...)) ...)
+      (cond
+       ((eq? method (quote method-id))
+        (apply method-id args)) ...
+        (else
+         (error "No such method: " method))))))
+
+(define (make-enemy name hp)
+  (methods
+   ((get-name) name)
+   ((damage-me weapon hp-lost)
+    (cond
+     ((dead?) (format #t "Poor ~a is already dead!\n" name))
+     (else (set! hp (- hp hp-lost))
+           (format #t "You attack ~a, doing ~a damage!\n" name hp-lost))))
+   ((dead?) (<= hp 0))))
+
+(define (print v) (format #t "~a~%" v))
+(define hobgob (make-enemy "Hobgoblin" 25))
+(print (hobgob 'get-name))
+(print (hobgob 'dead?))
+(print (hobgob 'damage-me "club" 10))
+(print (hobgob 'damage-me "sword" 20))
+(print (hobgob 'damage-me "pickle" 2))
+(print (hobgob 'dead?))

@@ -13,7 +13,6 @@ guile + emacs + geiser-guile
 : Hello world!
 
 ** Variables and procedures
-
 *** define
 
 #+begin_src scheme
@@ -141,8 +140,6 @@ Horace looks at you and says, 3 screws, eh? That'll be 6 coins!'
 
 #+RESULTS:
 : sum=13 product=30
-
-
 
 ** Conditionals and predicates
 *** ~string?~
@@ -412,7 +409,6 @@ Horace looks at you and says, 3 screws, eh? That'll be 6 coins!'
 : "Too big!"
 : "Just right!"
 
-
 ** Iteration & recursion
 *** map
 #+begin_src scheme
@@ -480,6 +476,11 @@ Horace looks at you and says, 3 screws, eh? That'll be 6 coins!'
       ""
       (string-append " " (fill-indent (- n 1)))))
 
+(define* (fill-indent-2 n #:optional (idt ""))
+  (if (= n 0)
+      idt
+      (fill-indent-2 (- n 1) (string-append idt " "))))
+
 (define (dump-tree tree indent)
   (if (= (length tree) 1)
       (format #f "(~a)" (car tree))
@@ -489,7 +490,8 @@ Horace looks at you and says, 3 screws, eh? That'll be 6 coins!'
          node-str
          (dump-tree (car (cdr tree)) sub-indent)
          (format #f "\n")
-         (fill-indent sub-indent)
+         ;; (fill-indent sub-indent)
+         (fill-indent-2 sub-indent)
          (dump-tree (car (cdr (cdr tree))) sub-indent)
          (format #f ")")))))
 
@@ -506,3 +508,223 @@ Horace looks at you and says, 3 screws, eh? That'll be 6 coins!'
 :       (1 (0)
 :          (0))))
 
+*** letrec
+#+begin_src scheme :results output
+(letrec ((alice
+          (lambda (first?)
+            (report-status "Alice" first?)
+            (if first? (bob #f))))
+         (bob
+          (lambda (first?)
+            (report-status "Bob" first?)
+            (if first? (alice #f))))
+         (report-status
+          (lambda (name first?)
+            (display
+             (string-append name " is "
+                            (if first? "first" "second") "!\n")))))
+  (alice #t)
+  (display "-----\n")
+  (bob #t))
+#+end_src
+
+#+RESULTS:
+: Alice is first!
+: Bob is second!
+: -----
+: Bob is first!
+: Alice is second!
+
+*** named let
+#+begin_src scheme
+(let loop ((words '("carrot" "potato" "pea" "celery"))
+           (num-words 0)
+           (num-chars 0))
+  (if (eq? words '())
+      (format #f "We found ~a words and ~a chars!"
+              num-words num-chars)
+      (loop (cdr words)
+            (+ num-words 1)
+            (+ num-chars (string-length (car words))))))
+#+end_src
+
+#+RESULTS:
+: We found 4 words and 21 chars!
+
+#+begin_src scheme
+(define (fill-indent n)
+  (let loop ((i n)
+             (idt ""))
+    (if (= i 0)
+        idt
+        (loop (- i 1)
+              (string-append idt (format #f "~x" i))))))
+
+(fill-indent 10)
+#+end_src
+
+#+RESULTS:
+: a987654321
+
+** Mutation & assignement & side effects
+*** ~set!~
+#+begin_src scheme :results output
+(define chest 'sword)
+(format #t "~a\n" chest)
+(set! chest 'gold)
+(format #t "~a\n" chest)
+#+end_src
+
+#+RESULTS:
+: sword
+: gold
+
+#+begin_src scheme
+(define (make-count-down n)
+  (lambda ()
+    (define last-n n)
+    (if (zero? n)
+        0
+        (begin
+          (set! n (- n 1))
+          last-n))))
+(define cdown (make-count-down 3))
+(values
+ (cdown)
+ (cdown)
+ (cdown)
+ (cdown)
+ (cdown))
+#+end_src
+
+#+RESULTS:
+: 3
+: 2
+: 1
+: 0
+: 0
+
+*** ~vector-set!~
+#+begin_src scheme :results output
+(define vec (vector 'a 'b 'c))
+(define (print v) (format #t "~a~%" v))
+
+(print vec)
+(print (vector-ref vec 1))
+(vector-set! vec 1 'boop)
+(print (vector-ref vec 1))
+(print vec)
+#+end_src
+
+#+RESULTS:
+: #(a b c)
+: b
+: boop
+: #(a boop c)
+
+** Extensibility
+*** macro
+#+begin_src scheme :results output
+(define (when test . body)
+  `(if ,test
+       ,(cons 'begin body)))
+
+(define-macro (when2 test . body)
+  `(if ,test
+       ,(cons 'begin body)))
+
+(define-syntax-rule (when3 test body ...)
+  (if test
+      (begin body ...)))
+
+(define (our-test) #t)
+(define (do-thing-1) (display "thing-1\n"))
+(define (do-thing-2) (display "thing-2\n"))
+
+(define (print v) (format #t "~a~%" v))
+
+(print (when '(our-test)
+		 '(do-thing-1)
+		 '(do-thing-2)))
+(display "=====\n")
+(print (when2 (our-test)
+			  (do-thing-1)
+			  (do-thing-2)))
+(display "=====\n")
+(when3 (our-test)
+       (do-thing-1)
+       (do-thing-2))
+#+end_src
+
+#+RESULTS:
+: (if (our-test) (begin (do-thing-1) (do-thing-2)))
+: =====
+: thing-1
+: thing-2
+: #<unspecified>
+: =====
+: thing-1
+: thing-2
+
+*** for macro
+#+begin_src scheme :results output
+(define-syntax-rule (for (item lst) body ...)
+  (for-each (lambda (item)
+              body ...)
+            lst))
+
+(for (str '("strawberries" "bananas" "grapes"))
+     (display (string-append "I just love "
+                             (string-upcase str)
+                             "!!!\n")))
+#+end_src
+
+#+RESULTS:
+: I just love STRAWBERRIES!!!
+: I just love BANANAS!!!
+: I just love GRAPES!!!
+
+*** methods
+#+begin_src scheme :results output
+(define-syntax-rule (methods ((method-id method-args ...)
+                              body ...) ...)
+  (lambda (method . args)
+    (letrec ((method-id
+              (lambda (method-args ...)
+                body ...)) ...)
+      (cond
+       ((eq? method (quote method-id))
+        (apply method-id args)) ...
+        (else
+         (error "No such method: " method))))))
+
+(define (make-enemy name hp)
+  (methods
+   ((get-name) name)
+   ((damage-me weapon hp-lost)
+    (cond
+     ((dead?) (format #t "Poor ~a is already dead!\n" name))
+     (else (set! hp (- hp hp-lost))
+           (format #t "You attack ~a, doing ~a damage!\n" name hp-lost))))
+   ((dead?) (<= hp 0))))
+
+(define (print v) (format #t "~a~%" v))
+(define hobgob (make-enemy "Hobgoblin" 25))
+(print (hobgob 'get-name))
+(print (hobgob 'dead?))
+(print (hobgob 'damage-me "club" 10))
+(print (hobgob 'damage-me "sword" 20))
+(print (hobgob 'damage-me "pickle" 2))
+(print (hobgob 'dead?))
+#+end_src
+
+#+RESULTS:
+: Hobgoblin
+: #f
+: You attack Hobgoblin, doing 10 damage!
+: #t
+: You attack Hobgoblin, doing 20 damage!
+: #t
+: Poor Hobgoblin is already dead!
+: #t
+: #t
