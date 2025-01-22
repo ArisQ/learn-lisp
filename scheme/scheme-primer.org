@@ -116,7 +116,7 @@ Horace looks at you and says, 3 screws, eh? That'll be 6 coins!'
 
 *** multiple return values
 :PROPERTIES:
-:header-args:scheme: :session **multi-return-value**
+:header-args:scheme+: :session **multi-return-value**
 :END:
 
 #+begin_src scheme
@@ -731,7 +731,7 @@ Horace looks at you and says, 3 screws, eh? That'll be 6 coins!'
 
 ** Scheme in Scheme
 :PROPERTIES:
-:header-args:scheme: :session **scheme-in-scheme*
+:header-args:scheme+: :session **scheme-in-scheme*
 :END:
 
 *** evaluator

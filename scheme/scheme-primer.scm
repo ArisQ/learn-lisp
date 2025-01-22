@@ -40,6 +40,17 @@
             #:shopkeeper "Horace"
             #:store "Horace's Hardware")
 
+(define (add-and-multiply x y)
+  (values (+ x y)
+          (* x y)))
+
+(add-and-multiply 2 8)
+
+(define-values (sum product)
+  (add-and-multiply 3 10))
+
+(format #t "sum=~a product=~a~%" sum product)
+
 (values
  (string? "apple")
  (string? 128)
@@ -374,3 +385,91 @@
 (print (hobgob 'damage-me "sword" 20))
 (print (hobgob 'damage-me "pickle" 2))
 (print (hobgob 'dead?))
+
+(use-modules (ice-9 match))
+
+(define (env-lookup env name)
+  (match (assoc name env)
+    ((_key . val) val)
+    (_ (error "Variable unbound: " name))))
+
+(define (extend-env env names vals)
+  (if (eq? names '())
+      env
+      (cons (cons (car names) (car vals))
+            (extend-env env (cdr names) (cdr vals)))))
+
+(define (evaluate expr env)
+  (match expr
+    ((or #t #f (? number?)) expr)
+    (('quote quoted-expr) quoted-expr)
+    ((? symbol? name) (env-lookup env name))
+    (('if test consequent alternate)
+     (if (evaluate test env)
+         (evaluate consequent env)
+         (evaluate alternate env)))
+    (('lambda (args ...) body)
+     (lambda (. vals)
+       (evaluate body (extend-env env args vals))))
+    ((proc-expr arg-exprs ...)
+     (apply (evaluate proc-expr env)
+            (map (lambda (arg-expr)
+                   (evaluate arg-expr env))
+                 arg-exprs)))))
+
+(define math-env
+  `((+ . ,+)
+    (- . ,-)
+    (* . ,*)
+    (/ . ,/)))
+
+(values
+ (evaluate '(* (- 8 (/ 30 5)) 21)
+           math-env)
+ (evaluate '((lambda (x) (* x x))
+             4)
+           math-env))
+
+(define fib-program
+  '((lambda (prog arg)
+      (prog prog arg))
+    (lambda (fib n)
+      (if (= n 0)
+          0
+          (if (= n 1)
+              1
+              (+ (fib fib (+ n -1))
+                 (fib fib (+ n -2))))))
+    10))
+
+(define fib-env
+  `((+ . ,+)
+    (n . ,1)
+    (= . ,=)))
+
+(evaluate fib-program fib-env)
+;; (evaluate '(if (= n 0)
+;;                0
+;;                (if (= n 1)
+;;                    1
+;;                    2)) fib-env)
+
+(values
+ (env-lookup  '((foo . newer-foo)
+                (bar . bar)
+                (foo . older-foo))
+              'foo)
+ (extend-env '((foo . foo-val))
+             '(bar quux)
+             '(bar-val quux-val))
+(evaluate #t '())
+(evaluate #f '())
+(evaluate 33 '())
+(evaluate -2/3 '())
+(evaluate ''foo '())
+(evaluate ''(1 2 3) '())
+(evaluate (quote (quote (1 2 3))) '())
+(evaluate 'x '((x . 33)))
+(evaluate '((lambda (x) x) 33) '())
+((evaluate '(lambda (x y) x) '()) 'first 'second)
+((evaluate '(lambda (x y) y) '()) 'first 'second))
