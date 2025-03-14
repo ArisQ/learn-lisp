@@ -1,0 +1,717 @@
+* guile
+** Hello guile
+*** Script
+#+begin_src sh
+#!/usr/local/bin/guile -s
+!#
+(display "Hello, world!")
+(newline)
+#+end_src
+
+*** Linking guile into programs
+
+*** Writing guile extensions
+*c++编写extension需要使用 ~extern "C"~ 声明导出函数*
+
+*** Module System
+#+begin_src scheme
+(use-modules (ice-9 popen))
+(use-modules (ice-9 rdelim))
+(define p (open-input-pipe "ls -l"))
+(read-line p)
+(read-line p)
+#+end_src
+
+
+**** write new module
+
+define module
+
+#+begin_src scheme
+;; /usr/local/share/guile/site/foo/bar.scm
+(define-module (foo bar)
+  #:export (frob))
+
+(define (frob x) (* 2 x))
+#+end_src
+
+use module
+#+begin_src scheme
+(use-modules (foo bar))
+(frob 12)
+#+end_src
+
+
+
+** Hello Scheme
+
+*** Data Types & Values & Variables
+
+#+begin_src scheme
+(define x 1)
+(set! x 5)
+(set! x (+ x 1))
+x
+#+end_src
+
+#+RESULTS:
+: 6
+
+
+*** Procedures
+#+begin_src scheme
+(define call/cc call-with-current-continuation)
+(set! call-with-current-continuation "Not a procedure any more!")
+
+(string-append "/home" "/" "andrew")
+(string-length "abc")
+
+((lambda (name address)
+   (string-append "Name=" name ":Address=" address))
+ "FSF" "Cambridge")
+
+(define make-combined-string (lambda (name address)
+							   (string-append "Name=" name ":Address=" address)))
+(make-combined-string "FSF" "Cambridge")
+
+(define (make-combined-string name address)
+  (string-append "Name=" name ":Address=" address))
+(make-combined-string "FSF" "Cambridge")
+#+end_src
+
+
+
+*** Expression & Evaluation
+
+value & side effect
+
+*** Closure
+
+- Name Location/vcell Value Environment
+
+- define let let* letrec
+
+- environment chaining
+
+- lexical scope
+
+  #+begin_src emacs-lisp
+(defvar currency-abbreviation "USD")
+
+(defun currency-string (units hundredths)
+(concat currency-abbreviation
+        (number-to-string units)
+        "."
+        (number-to-string hundredths)))
+
+(defun french-currency-string (units hundredths)
+(let ((currency-abbreviation "FRF"))
+    (currency-string units hundredths)))
+
+(display (french-currency-string 33 44))
+  #+end_src
+
+  #+begin_src scheme
+(define currency-abbreviation "USD")
+
+(define (currency-string units hundredths)
+		(string-append currency-abbreviation
+					   (number->string units)
+					   "."
+					   (number->string hundredths)))
+
+(define (french-currency-string units hundredths)
+		(let ((currency-abbreviation "FRF"))
+		  (currency-string units hundredths)))
+
+
+(display (french-currency-string 33 44))
+  #+end_src
+
+- closure
+
+  #+begin_src scheme
+  (define-values (get-balance deposit)
+    (let ((balance 0))
+      (values
+       (lambda () balance)
+       (lambda (amount)
+         (set! balance (+ balance amount))
+         balance))))
+
+  (define (withdraw amount) (deposit (- amount)))
+  (get-balance)
+  (deposit 50)
+  (withdraw 75)
+  #+end_src
+
+- object oriented
+  
+
+** Programming in Scheme
+
+*** options & environment variables
+
+~GUILE_LOAD_COMPILED_PATH~
+~GUILE_LOAD_PATH~
+~GUILE_EXTENSIONS_PATH~
+
+*** scripting
+
+- script file header
+  #+begin_src scheme
+  #!/usr/local/bin/guile -s
+  !#
+
+  (write (command-line))
+  (newline)
+  #+end_src
+
+- meta switch
+
+  #+begin_src scheme
+  #!/usr/local/bin/guile \
+  -e main -s
+  !#
+  #+end_src
+
+- call procedure from module: ~(@ (module) procedure)~
+  #+begin_src scheme
+  #!/usr/local/bin/guile \
+  -l fact -e (@ (fac) main) -s
+  !#
+
+  ;; for exported procedures
+  #!/usr/local/bin/guile \
+  -l fact -e (fac) -s
+  !#
+
+  ;; for exported procedures
+  #!/usr/bin/env sh
+  exec guile -l fact -e '(@ (fac) main)' -s "$0" "$@"
+  !#
+
+  (define module (fac)
+    #:export (main))
+  #+end_src
+
+- ~system*~ ~open-pipe~
+  
+
+*** using guile interactively / REPL
+
+- ~language@(module)~ e.g. ~scheme@(guile-user)~
+
+- =~/.guile=
+
+- readline
+  #+begin_src scheme
+  (use-modules (ice-9 readline))
+  (activate-readline)
+  #+end_src
+
+- value history
+  #+begin_src scheme
+  ,option value-history #f
+  ,option value-history #t
+
+  (use-modules (ice-9 history))
+  (value-history-enabled?)
+  (enable-value-history!)
+  (disable-value-history!)
+  (clear-value-history!)
+  #+end_src
+
+- REPL commands
+
+  ~,option~
+  ~,pretty-print~
+
+  - help commands
+    ~help~ ~show~ ~apropos~ ~describe~
+
+  - module commands
+    ~module~ ~import~ ~load~ ~reload~ ~binding~ ~in~
+
+  - language commands
+    ~language~
+
+  - compile commands
+    ~compile~ ~compile-file~ ~expand~ ~optimize~ ~disassemble~ ~disassemble-file~
+
+  - profile commands
+    ~time~ ~profile~ ~trace~
+
+  - debug commands
+    ~backtrace~ ~up~ ~down~ ~frame~ ~locals~ ~error-message/error~ ~registers~ ~width~ ~break~ ~break-at-source~ ~tracepoint~ ~step~ ~next~ ~finish~
+
+  - inspect commands
+  - system commands
+
+- error handling
+  
+- interactive debugging
+
+*** using guile in emacs
+- paredit
+- geiser
+
+*** using guile tools
+#+begin_src shell
+guild compile -o foo.go foo.scm
+#+end_src
+
+*** install site packages
+
+#+begin_src scheme
+(display %load-path)
+
+(%site-dir)
+
+;; compiled .go files
+(display %load-compiled-path)
+
+(%site-ccache-dir)
+
+;; extension dir
+#+end_src
+
+*** distributing guile code
+[[https://gitlab.com/a-sassmannshausen/guile-hall][guile-hall]]
+
+
+** Programming in C
+
+*** parallel installations
+
+- effective version of guile
+
+  ~pkg-config --cflags --libs guile-3.0~
+
+  
+*** linking programs with guile
+#+begin_src c
+#include <libguile.h>
+
+// scm_with_guile
+// scm_init_guile
+// scm_boot_guile
+// scm_shell
+
+#+end_src
+
+*** linking guile with libraries / extension
+
+#+begin_src c
+#include <math.h>
+#include <libguile.h>
+SCM j0_wrapper (SCM x) {
+    return scm_from_double (j0 (scm_to_double (x)));
+}
+void init_bessel () {
+    scm_c_define_gsubr ("j0", 1, 0, 0, j0_wrapper);
+}
+#+end_src
+
+#+begin_src shell
+gcc `pkg-config --cflags guile-3.0` \
+    -shared -o libguile-bessel.so -fPIC bessel.c
+#+end_src
+
+#+begin_src scheme
+(load-extension "libguile-bessel" "init_bessel")
+(j0 2)
+#+end_src
+
+*** general concepts for using libguile
+
+- dynamic types
+  ~SCM~
+  #+begin_src c
+  // scm_sum
+  // scm_is_true
+  // scm_is_false
+  // scm_is_eq
+
+  // scm_from_type
+  // scm_to_type
+
+  SCM_BOOL_F // #f
+  SCM_BOOL_T // #t
+  SCM_EOL // {}
+  #+end_src
+
+  ~scm_t_bits~
+
+- garbage collection
+
+  #+begin_src c
+  // scm_gc_protect_object
+  // scm_permanent_object
+  #+end_src
+
+-  control flow
+
+  ~call-with-current-continuation~ aka. ~call/cc~
+
+- asynchronous signals
+  - safe point
+  - ~scm_dynwind_block_asyncs~
+  - ~SCM_TICK~
+
+- multi-threading
+  
+*** defining new foreign object types
+
+- ~scm_make_foreign_object_type~
+- ~scm_make_foreign_object_1~
+- ~scm_foreign_object_ref~
+  - ~_signed_ref~
+- ~scm_foreign_object_set_x~
+  - ~_unsigned_set_x~
+
+    
+*** function snarfing
+
+- guile-snarf
+  
+*** an overview of guile programming
+
+*** autoconf support
+
+
+** API Reference
+
+*** data types
+
+- boolean
+- number
+  - integer ~#x1e~
+  - rational
+  - real
+  - complex
+- string
+- symbol
+- keyword
+- pairs (cons car cdr caar cadr)
+- lists (list length append reverse map)
+- vectors ~#(1 2 3)~
+  - uniform numeric vectors
+  - bit vectors ~(make-bitvector 8 #f)~ ~#*101~
+  - byte vectors ~#vu8(1 53 204)~
+- arrays
+  - ~#<rank><vectag><@lower><:len><@lower><:len>...~
+  - ~#2u32:2:3((1 2 3) (4 5 6))~
+  - ~make-array~
+  - shared array
+- vlists ~(ice-9 vlist)~
+- records/structures
+  - srfi-9
+  - structure/vtable
+- dictionary
+  - association list / alist ~'((k1 . v1) (k2 . v2))~ ~acons assq assv assoc~
+  - vhash (vlist-based hash lists) ~(ice-9 vlist)~
+  - hash table ~make-hash-table hashq-set! hashq-ref~
+- other types
+  - procedures
+  - variable objects
+  - scheduling threads/mutexes
+  - ports
+  - regular expression
+
+**** symbol
+
+#+begin_src scheme
+(symbol-hash 'color)
+(symbol? 'color)
+(symbol->string 'color)
+#+end_src
+
+**** keyword
+
+#+begin_src scheme
+(make-window #:width 800 #:height 100)
+(define (make-window . args)
+  (let ((width (get-keywoard-value args #:width 800))
+        (height (get-keywoard-value args #:width 100)))
+    ;; ...
+    ))
+
+(use-modules (ice-9 optargs))
+(define (make-window . args)
+  (let-keywords args #f ((width 800)
+                         (height 100))
+                ;; ...
+                ))
+#+end_src
+
+
+*** procedures
+
+- lambda
+- primitive procedure ~scm_c_make_gsubr scm_c_define_gsubr~
+- compiled procedure (program)
+  - ~(use-modules (system vm program))~
+  - ~program? program-code~
+- optional arguments ~lambda* define*~
+  - ~(ice-9 optargs)~
+- case-lambda
+- high order functions ~const negate compose identity and=>~
+- procedure properties and meta-information
+- procedures with setters ~make-procedure-with-setter~
+- inlinable procedures ~define-inlinable ,optimize~
+
+*** macros
+
+- define macros ~define-syntax let-syntax~
+- ~syntax-rules~
+  - patterns
+  - hygiene
+  - shorthands
+- ~syntax-case~
+- syntax transformer helpers
+- lisp-style macro definitions ~defmacro define-macro~
+- identifiers macros
+- syntax parameters
+- eval-when
+- macro expansion ~expand macroexpand~
+- internal macros
+
+*** general utility functions
+
+- equality ~eq? eqv? equal?~
+- object properties ~make-object-property set! object-properties~
+- sorting ~merge merge! sorted? sort sort!~
+- copying deep structures ~(ice-9 copy-tree)~
+- general string conversion ~object->string~
+- hooks ~make-hook add-hook! remove-hook! reset-hook! run-hook hook->list~
+
+  
+*** definitions and variable bindings
+
+- top-level variable definition ~define set! define-once~
+- local variable binding ~let let* letrec~
+- internal definition
+- query variable bindings ~defined?~
+- binding multiple return values ~define-values~
+
+*** control flow
+
+- sequencing and splicing ~begin~
+- simple conditional evaluation ~if when unless cond case~
+- ~and or~
+- iteration ~do while break continue~
+- prompts ~call-with-prompt abort-to-prompt call/ec~
+  - shift reset ~ice-9 control~
+- continuations ~call/cc~ （不推荐，会复制栈，导致低效）
+- returning and accepting multiple values ~values call-with-values receive~
+- exceptions ~make-exception exception?~
+  - ~(ice-9 exceptions)~
+  - ~raise-exception with-exception-handler~
+  - old style before 2019 ~catch with-throw-handler throw~
+  - signaling errors ~error~
+- dynamic wind
+- fluid and dynamic states
+- parameters ~make-parameter parameterize~
+- handle errors
+- ~with-continuation-barrier~
+
+
+#+begin_src scheme
+(define kont #f)
+(format #t "the return is ~a\n"
+		(call/cc (lambda (k)
+				   (set! kont k)
+				   1)))
+(kont 2)
+#+end_src
+
+*** input and output
+
+- ports
+- binary io ~(ice-9 binary-ports)~ ~(scheme base)~
+- encoding
+- textual io ~(ice-9 textual-ports)~
+- buffering
+- random access
+- delimited io ~(ice-9 rdelim)~
+- default ports ~current-input-port current-output-port current-error-port~
+- port types
+  - file ports
+  - bytevector ports
+  - string ports
+  - custom ports
+  - soft ports
+  - void ports
+  - low-level custom ports
+- venerable port interfaces
+- non-blocking io
+- handling of unicode Byte Order Marks (BOM)
+
+*** regular expressions
+
+- ~(provided? 'regex)~
+- ~(use-modedules (ice-9 regex))~
+- ~string-match make-regexp regexp-exec~
+- match object ~match:substring match:start match:end~
+
+*** LALR(1) Parsing
+
+*** PEG Parsing
+
+*** reading and evaluating scheme code
+
+- syntax
+  - expression
+  - comments
+  - block comments
+  - case sensitivity
+  - keyword
+- reading scheme code ~read read-syntax~
+- writing scheme values ~write display~
+- ~eval (ice-9 eval-string)~
+- compile
+  - ~guild compile [option...] file...~
+- ~load load-compiled~
+- load paths ~%load-path load-from-path add-to-load-path~
+- character encoding of source files
+- delayed evaluation ~delay promise? force~
+- local evaluation ~(ice-9 local-eval)~
+- local inclusion ~include~
+- sandbox evaluation ~(ice-9 sandbox)~
+- REPL servers ~(system repl server) (system repl coop-server)~
+  
+*** memory management and garbage collection
+
+- ~gc~
+- memory blocks
+- weak references
+  - weak hash tables
+  - weak vectors
+- guardians ~make-guardian~
+
+*** modules
+
+- module is a set of *bindings* of symbols (names) to Scheme objects
+- public / export list / public interface
+- module name are lists of one or more symbols
+- ~use-modules~
+  - ~#:select #:renamer #:prefix~
+  - ~symbol-prefix-proc~
+  - ~@~ ~@@~
+- ~%load-path~
+- create modules
+  - ~define-module~
+  - ~define-public~
+  - ~export~
+- modules and file system
+- R6RS version references ~#:version~
+- R6RS libraries
+- variables
+  - ~make-variable~
+- module system reflection
+  - ~current-module~
+- delcarative modules
+  - ~,module boxes~ 
+  - ~,reload boxes~
+  - ~define-once~ will prevent declarative-definition
+  - ~user-modules-declarative~
+  - ~-O1~ ~-O2~
+- accessing modules from c
+- ~provide~ ~require~
+- environments
+  - ~scheme-report-environmet null-environment interaction-environment~
+
+
+*** foreign function interface
+
+- foreign libraries: dynamically-loadable modules
+  - shared linbraries of operating system
+    - dyamic linking
+    - dlopening
+  - module/plug-in/bundle/extension
+  - ~load-foregine-libary~
+    - ~(use-modeules (system foreign-library))~
+- foreign extensions
+  - ~gcc -shared -o bessel.so -fPIC bessel.c~
+  - ~pkg-config --variable=extensionsdir guile-3.0~
+  - ~load-extension~ ~scm_c_define_gsubr~
+- ~foreign-libary-pointer~
+- foreign types
+- foreign functions
+  - ~pointer->procedure~
+- void pointers and byte access
+- foreign structs
+- more foreign functions
+
+*** foreign objects
+
+*** smobs (small objects) [legacy]
+
+*** threads, mutexes, asyncs and dynamic roots
+
+- threads
+  - ~all-threads current-thread~
+  - thread-local variables
+- asynchronous interrupts
+- atomics
+- blocking in guile mode
+- futures
+  - ~(ice-9 futures)~
+  - ~(touch (future (+ 2 3)))~
+- parallel forms
+  - ~parallel~
+  - ~(ice-9 threads)~
+    
+*** configuration, features and runtime options
+
+- configuration, build and installation
+  - ~version effective-version~
+
+- feature tracking ~*features*~ ~provided? feature? provider~
+
+- runtime options
+
+*** support for other languages
+
+- ~,language~
+- elisp / ECMAScript
+
+*** internationalization
+
+- ~(ice-9 i18n)~
+- text collation
+- character case mapping
+- number input and output
+- ~locale-encoding~
+- gettext
+
+  
+*** debugging infrastructure
+
+- ~make-stack~ ~stack? frame?~
+- source properties (deprecated, use ~read-syntax~)
+- programmatic error handling
+  - catch exceptions ~error raise-exception with-exception-handler~
+  - pre-unwind debugging
+  - ~call-with-error-handling~
+  - stack overflow
+    - ~(use-modules (system vm vm))~ ~call-with-stack-overflow-handler~
+  - debug-options
+- traps
+  - vm hooks
+  - trap interface
+  - ~,trace~
+  - trap states
+  - high-level traps ~with-default-trap-handler~
+- GDB support
+  
+  
+*** code coverage reports
+
+- ~(system vm coverage)~
+  - ~with-code-coverage~
+
+    
+** Guile Modules
+
