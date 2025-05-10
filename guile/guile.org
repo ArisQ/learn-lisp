@@ -612,7 +612,7 @@ gcc `pkg-config --cflags guile-3.0` \
 - module system reflection
   - ~current-module~
 - delcarative modules
-  - ~,module boxes~ 
+  - ~,module boxes~
   - ~,reload boxes~
   - ~define-once~ will prevent declarative-definition
   - ~user-modules-declarative~
@@ -705,13 +705,64 @@ gcc `pkg-config --cflags guile-3.0` \
   - trap states
   - high-level traps ~with-default-trap-handler~
 - GDB support
-  
-  
+
+
 *** code coverage reports
 
 - ~(system vm coverage)~
   - ~with-code-coverage~
 
-    
+
 ** Guile Modules
+
+*** SLIB
+- ~(use-modules (ice-9 slib))~
+- JACAL
+
+*** POSIX System Calls and Networking
+
+- ports and file descriptiors
+- file system
+- user information
+- time ~(current-time)~ ~(gettimeofday)~
+- runtime environment ~environ getenv~
+- processes
+- signals
+- terminals and ptys
+- pipes
+- networking
+  - network databases ~getaddrinfo~
+  - network socket address
+- system identification
+- locales
+- encryption
+
+*** HTTP, the Web, and all That
+
+- types and the web
+  - sxml
+- Universal Resource Identifiers (URI)
+  - ~build-uri~
+- the Hybper-Text Transfer Protocol (HTTP)
+  - ~(use-modules (web http))~
+  - ~string->header header->string~
+- HTTP headers
+- transfer codings
+- ~(use-modules (web request))~
+- ~(use-modules (web response))~
+- ~(use-modules (web client))~
+- ~(use-modules (web server))~
+- higher-level interfaces
+
+
+
+*** The ~(ice-9 getopt-long)~ Module
+
+*** SRFI Support Modules
+
+
+** GOOPS
+
+*** ~(use-modules (oop goops))~
+
 
